@@ -1,0 +1,9 @@
+[meta]
+name     = "mem-watcher"
+author   = "XertroV"
+category = "Dev"
+version  = "0.1.5"
+
+[script]
+#__DEFINES__
+# dependencies = ["MLHook", "MLFeedRaceData"]
