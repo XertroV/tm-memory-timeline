@@ -87,17 +87,17 @@ class RawBufferElem {
     }
 
     CMwNod@ GetNod(uint o) {
-        return Dev_GetNodFromPointer(GetUint64(o));
+        return Dev_GetNodFromPointer(GetUInt64(o));
     }
     void SetNod(uint o, CMwNod@ nod) {
         CheckOffset(o, 8);
         Dev::SetOffset(Dev_GetNodFromPointer(ptr), o, nod);
     }
-    uint64 GetUint64(uint o) {
+    uint64 GetUInt64(uint o) {
         CheckOffset(o, 8);
         return Dev::ReadUInt64(ptr + o);
     }
-    void SetUint64(uint o, uint64 value) {
+    void SetUInt64(uint o, uint64 value) {
         CheckOffset(o, 8);
         Dev::Write(ptr + o, value);
     }
@@ -109,23 +109,23 @@ class RawBufferElem {
         CheckOffset(o, 4);
         Dev::Write(ptr + o, GetMwId(value));
     }
-    uint32 GetUint32(uint o) {
+    uint32 GetUInt32(uint o) {
         CheckOffset(o, 4);
         return Dev::ReadUInt32(ptr + o);
     }
-    void SetUint32(uint o, uint value) {
+    void SetUInt32(uint o, uint value) {
         CheckOffset(o, 4);
         Dev::Write(ptr + o, value);
     }
-    uint16 GetUint16(uint o) {
+    uint16 GetUInt16(uint o) {
         CheckOffset(o, 2);
         return Dev::ReadUInt16(ptr + o);
     }
-    uint8 GetUint8(uint o) {
+    uint8 GetUInt8(uint o) {
         CheckOffset(o, 1);
         return Dev::ReadUInt8(ptr + o);
     }
-    void SetUint8(uint o, uint8 value) {
+    void SetUInt8(uint o, uint8 value) {
         CheckOffset(o, 1);
         Dev::Write(ptr + o, value);
     }
@@ -270,13 +270,13 @@ class RawBufferElem {
     void DrawRawValues(uint64 segPtr, int bytesToRead) {
         switch (g_RV_RenderAs) {
             case RV_ValueRenderTypes::Float: DrawRawValuesFloat(segPtr, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint32: DrawRawValuesUint32(segPtr, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint32D: DrawRawValuesUint32D(segPtr, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint64: DrawRawValuesUint64(segPtr, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint16: DrawRawValuesUint16(segPtr, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint16D: DrawRawValuesUint16D(segPtr, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint8: DrawRawValuesUint8(segPtr, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint8D: DrawRawValuesUint8D(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt32: DrawRawValuesUInt32(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt32D: DrawRawValuesUInt32D(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt64: DrawRawValuesUInt64(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt16: DrawRawValuesUInt16(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt16D: DrawRawValuesUInt16D(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt8: DrawRawValuesUInt8(segPtr, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt8D: DrawRawValuesUInt8D(segPtr, bytesToRead); return;
             // case RV_ValueRenderTypes::Int32: DrawRawValuesInt32(segPtr, bytesToRead); return;
             case RV_ValueRenderTypes::Int32D: DrawRawValuesInt32D(segPtr, bytesToRead); return;
             // case RV_ValueRenderTypes::Int16: DrawRawValuesInt16(segPtr, bytesToRead); return;
@@ -293,39 +293,39 @@ class RawBufferElem {
             _DrawRawValueFloat(segPtr + i);
         }
     }
-    void DrawRawValuesUint32(uint64 segPtr, int bytesToRead) {
+    void DrawRawValuesUInt32(uint64 segPtr, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 4) {
-            _DrawRawValueUint32(segPtr + i);
+            _DrawRawValueUInt32(segPtr + i);
         }
     }
-    void DrawRawValuesUint32D(uint64 segPtr, int bytesToRead) {
+    void DrawRawValuesUInt32D(uint64 segPtr, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 4) {
-            _DrawRawValueUint32D(segPtr + i);
+            _DrawRawValueUInt32D(segPtr + i);
         }
     }
-    void DrawRawValuesUint64(uint64 segPtr, int bytesToRead) {
+    void DrawRawValuesUInt64(uint64 segPtr, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 8) {
-            _DrawRawValueUint64(segPtr + i);
+            _DrawRawValueUInt64(segPtr + i);
         }
     }
-    void DrawRawValuesUint16(uint64 segPtr, int bytesToRead) {
+    void DrawRawValuesUInt16(uint64 segPtr, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 2) {
-            _DrawRawValueUint16(segPtr + i);
+            _DrawRawValueUInt16(segPtr + i);
         }
     }
-    void DrawRawValuesUint16D(uint64 segPtr, int bytesToRead) {
+    void DrawRawValuesUInt16D(uint64 segPtr, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 2) {
-            _DrawRawValueUint16D(segPtr + i);
+            _DrawRawValueUInt16D(segPtr + i);
         }
     }
-    void DrawRawValuesUint8(uint64 segPtr, int bytesToRead) {
+    void DrawRawValuesUInt8(uint64 segPtr, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 1) {
-            _DrawRawValueUint8(segPtr + i);
+            _DrawRawValueUInt8(segPtr + i);
         }
     }
-    void DrawRawValuesUint8D(uint64 segPtr, int bytesToRead) {
+    void DrawRawValuesUInt8D(uint64 segPtr, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 1) {
-            _DrawRawValueUint8D(segPtr + i);
+            _DrawRawValueUInt8D(segPtr + i);
         }
     }
     void DrawRawValuesInt32(uint64 segPtr, int bytesToRead) {
@@ -362,22 +362,22 @@ class RawBufferElem {
     void _DrawRawValueFloat(uint64 valPtr) {
         RV_CopiableValue(tostring(Dev::ReadFloat(valPtr)));
     }
-    void _DrawRawValueUint32(uint64 valPtr) {
+    void _DrawRawValueUInt32(uint64 valPtr) {
         RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt32(valPtr)));
     }
-    void _DrawRawValueUint32D(uint64 valPtr) {
+    void _DrawRawValueUInt32D(uint64 valPtr) {
         RV_CopiableValue(tostring(Dev::ReadUInt32(valPtr)));
     }
-    void _DrawRawValueUint16(uint64 valPtr) {
+    void _DrawRawValueUInt16(uint64 valPtr) {
         RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt16(valPtr)));
     }
-    void _DrawRawValueUint16D(uint64 valPtr) {
+    void _DrawRawValueUInt16D(uint64 valPtr) {
         RV_CopiableValue(tostring(Dev::ReadUInt16(valPtr)));
     }
-    void _DrawRawValueUint8(uint64 valPtr) {
+    void _DrawRawValueUInt8(uint64 valPtr) {
         RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt8(valPtr)));
     }
-    void _DrawRawValueUint8D(uint64 valPtr) {
+    void _DrawRawValueUInt8D(uint64 valPtr) {
         RV_CopiableValue(tostring(Dev::ReadUInt8(valPtr)));
     }
     void _DrawRawValueInt32(uint64 valPtr) {
@@ -398,7 +398,7 @@ class RawBufferElem {
     void _DrawRawValueInt8D(uint64 valPtr) {
         RV_CopiableValue(tostring(Dev::ReadInt8(valPtr)));
     }
-    void _DrawRawValueUint64(uint64 valPtr) {
+    void _DrawRawValueUInt64(uint64 valPtr) {
         RV_CopiableValue(Text::FormatPointer(Dev::ReadUInt64(valPtr)));
     }
 
@@ -425,13 +425,13 @@ const uint RV_SEGMENT_SIZE = 0x10;
 
 enum RV_ValueRenderTypes {
     Float = 0,
-    Uint64,
-    Uint32,
-    Uint32D,
-    Uint16,
-    Uint16D,
-    Uint8,
-    Uint8D,
+    UInt64,
+    UInt32,
+    UInt32D,
+    UInt16,
+    UInt16D,
+    UInt8,
+    UInt8D,
     Int32D,
     Int16D,
     Int8D,

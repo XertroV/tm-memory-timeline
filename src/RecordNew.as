@@ -1,17 +1,25 @@
+#if DEV
+[Setting hidden]
+#endif
+string m_ptr;
+
 class RecordNewTab : Tab {
     RecordNewTab(TabGroup@ parent) {
         super(parent, "Record New", "\\$f00" + Icons::CircleO + "\\$z");
+        startnew(CoroutineFunc(TryParsePtr_NoRet));
     }
 
-    string m_recordingName = "v1";
-    string m_ptr;
+    string m_recordingName = "v";
+    bool m_appendRecordingCounter = true;
     string ptrValidationErr;
     bool ptrValid = false;
     uint64 outPtr;
     uint m_size = 0x360;
-    bool m_startOnRaceReset = true;
-    int m_recordingStartDelay = 2900;
-    int m_recordingDuration = 1700;
+    bool m_startOnRaceReset = false;
+    // int m_recordingStartDelay = 2800;
+    // int m_recordingDuration = 1800;
+    int m_recordingStartDelay = 0;
+    int m_recordingDuration = 1800 + 2800;
 
     bool ptrChanged;
 
@@ -22,6 +30,8 @@ class RecordNewTab : Tab {
         UI::PushItemWidth(200);
 
         m_recordingName = UI::InputText("Recording Name", m_recordingName);
+        UI::SameLine();
+        m_appendRecordingCounter = UI::Checkbox("Append Counter", m_appendRecordingCounter);
 
         m_ptr = UI::InputText("Pointer", m_ptr, ptrChanged);
         if (ptrChanged) TryParsePtr();
@@ -62,13 +72,17 @@ class RecordNewTab : Tab {
         UI::SeparatorText("Start New Recording");
         UI::BeginDisabled(!ptrValid || m_size == 0 || m_recordingName.Length == 0 || m_recordingStartDelay < -1500);
         if (UI::Button("Record")) {
-            MemorySnapshotRecordingTab(g_Recordings, m_recordingName, outPtr, m_size, m_startOnRaceReset && !noPg, m_recordingStartDelay, m_recordingDuration);
+            MemorySnapshotRecordingTab(g_Recordings, m_recordingName + (m_appendRecordingCounter ? tostring(g_RecordingCounter+1) : ""), outPtr, m_size, m_startOnRaceReset && !noPg, m_recordingStartDelay, m_recordingDuration);
         }
         UI::EndDisabled();
         UI::SeparatorText("History");
     }
 
     private string _ptrValidationErrStart = "\\$i\\$fca";
+
+    void TryParsePtr_NoRet() {
+        TryParsePtr();
+    }
 
     bool TryParsePtr() {
         ptrValidationErr = _ptrValidationErrStart;

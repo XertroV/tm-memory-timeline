@@ -72,6 +72,14 @@ shared bool CopiableLabeledValue(const string &in label, const string &in value)
     return false;
 }
 
+shared bool CopiableLabeledFormattedValue(const string &in label, const string &in valueDisplay, const string &in valueRaw) {
+    if (ClickableLabel(label, valueDisplay)) {
+        SetClipboard(valueRaw);
+        return true;
+    }
+    return false;
+}
+
 shared bool CopiableValue(const string &in value) {
     if (ClickableLabel("", value)) {
         SetClipboard(value);

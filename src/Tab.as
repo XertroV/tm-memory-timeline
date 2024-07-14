@@ -1,3 +1,4 @@
+const int TWO_10_8 = 200000000;
 const int TWO_BILLION = 2000000000;
 
 class Tab {

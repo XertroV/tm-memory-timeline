@@ -23,9 +23,12 @@ void Main() {
     }
 }
 
+vec2 screen;
 float g_LastDT;
 void Update(float dt) {
     g_LastDT = dt;
+    screen.x = Draw::GetWidth();
+    screen.y = Draw::GetHeight();
 }
 
 [Setting hidden]
@@ -40,4 +43,10 @@ void Render() {
         RenderMainUI();
     }
     UI::End();
+}
+
+void RenderMenu() {
+    if (UI::MenuItem(MenuTitle, "", g_WindowOpen)) {
+        g_WindowOpen = !g_WindowOpen;
+    }
 }

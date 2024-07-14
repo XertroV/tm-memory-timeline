@@ -4,12 +4,20 @@ class MemorySnapshot {
     MemoryBuffer@ buf;
     string memHex;
     uint64 ts;
+    int64 dts;
+    int64 gt;
+    int64 rt;
+    uint frameIx;
 
-    MemorySnapshot(uint64 ptr, uint32 size) {
+    MemorySnapshot(uint64 ptr, uint32 size, int64 initFrameTs, uint frameIx) {
         this.ptr = ptr;
         this.size = size;
         @buf = MemoryBuffer(size);
         ts = Time::Now;
+        dts = initFrameTs > 0 ? ts - initFrameTs : 0;
+        gt = GetGameTime();
+        rt = GetRaceTime();
+        this.frameIx = frameIx;
         SaveMemToBuffer();
         memHex = Dev::Read(ptr, size);
     }
@@ -37,13 +45,16 @@ class MemorySnapshot {
         UI::PushFont(g_MonoFont);
         g_RV_RenderAs = DrawComboRV_ValueRenderTypes("Render Values##"+ptr, g_RV_RenderAs);
 
-        auto nbSegments = size / RV_SEGMENT_SIZE;
-        for (uint i = 0; i < nbSegments; i++) {
-            DrawSegment(i);
+        if (UI::BeginChild("##"+ptr, vec2(0, 0), true)) {
+            auto nbSegments = size / RV_SEGMENT_SIZE;
+            for (uint i = 0; i < nbSegments; i++) {
+                DrawSegment(i);
+            }
+            auto remainder = size - (nbSegments * RV_SEGMENT_SIZE);
+            if (remainder >= RV_SEGMENT_SIZE) throw("Error caclulating remainder size");
+            DrawSegment(nbSegments, remainder);
         }
-        auto remainder = size - (nbSegments * RV_SEGMENT_SIZE);
-        if (remainder >= RV_SEGMENT_SIZE) throw("Error caclulating remainder size");
-        DrawSegment(nbSegments, remainder);
+        UI::EndChild();
 
         UI::PopFont();
     }
@@ -62,7 +73,7 @@ class MemorySnapshot {
         string mem;
         for (int o = 0; o < RV_SEGMENT_SIZE; o += 4) {
             mem = o >= limit ? "__ __ __ __" : Read(segOffset + o, Math::Min(limit, 4));
-            UI::Text(mem);
+            DrawMemDiffWithPrev(mem, segOffset + o, limit);
             UI::SameLine();
             if (o % 8 != 0) {
                 UI::Dummy(vec2(10, 0));
@@ -73,6 +84,47 @@ class MemorySnapshot {
         UI::Dummy(vec2());
     }
 
+    MemorySnapshot@ priorSnapshot;
+
+    void DrawMemDiffWithPrev(const string &in mem, uint64 offset, int limit) {
+        if (priorSnapshot is null) {
+            UI::Text(mem);
+            return;
+        }
+        auto priorMem = priorSnapshot.Read(offset, limit);
+        if (mem == priorMem) {
+            UI::Text(mem);
+            return;
+        }
+        string diff;
+        uint8 byte;
+        bool lastWasDiff = false;
+        for (int i = 0; i < mem.Length; i++) {
+            byte = mem[i];
+            if (byte == 0x20) diff += " ";
+            else if (i >= priorMem.Length) {
+                if (lastWasDiff || i == 0) {
+                    diff += "\\$0f0";
+                    lastWasDiff = false;
+                }
+                diff += Text::Format("%c", byte);
+            } else if (byte == priorMem[i]) {
+                if (lastWasDiff || i == 0) {
+                    diff += "\\$bbb";
+                    lastWasDiff = false;
+                }
+                diff += Text::Format("%c", byte);
+            } else {
+                if (!lastWasDiff || i == 0) {
+                    diff += "\\$ff0";
+                    lastWasDiff = true;
+                }
+                diff += Text::Format("%c", byte);
+            }
+        }
+        UI::Text(diff);
+    }
+
     string Read(uint16 offset, uint count) {
         if (count < 1) return "";
         return this.memHex.SubStr(offset * 3, count * 3 - 1);
@@ -81,13 +133,13 @@ class MemorySnapshot {
     void DrawRawValues(uint64 offset, int bytesToRead) {
         switch (g_RV_RenderAs) {
             case RV_ValueRenderTypes::Float: DrawRawValuesFloat(offset, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint32: DrawRawValuesUint32(offset, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint32D: DrawRawValuesUint32D(offset, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint64: DrawRawValuesUint64(offset, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint16: DrawRawValuesUint16(offset, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint16D: DrawRawValuesUint16D(offset, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint8: DrawRawValuesUint8(offset, bytesToRead); return;
-            case RV_ValueRenderTypes::Uint8D: DrawRawValuesUint8D(offset, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt32: DrawRawValuesUInt32(offset, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt32D: DrawRawValuesUInt32D(offset, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt64: DrawRawValuesUInt64(offset, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt16: DrawRawValuesUInt16(offset, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt16D: DrawRawValuesUInt16D(offset, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt8: DrawRawValuesUInt8(offset, bytesToRead); return;
+            case RV_ValueRenderTypes::UInt8D: DrawRawValuesUInt8D(offset, bytesToRead); return;
             // case RV_ValueRenderTypes::Int32: DrawRawValuesInt32(offset, bytesToRead); return;
             case RV_ValueRenderTypes::Int32D: DrawRawValuesInt32D(offset, bytesToRead); return;
             // case RV_ValueRenderTypes::Int16: DrawRawValuesInt16(offset, bytesToRead); return;
@@ -104,39 +156,39 @@ class MemorySnapshot {
             _DrawRawValueFloat(offset + i);
         }
     }
-    void DrawRawValuesUint32(uint64 offset, int bytesToRead) {
+    void DrawRawValuesUInt32(uint64 offset, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 4) {
-            _DrawRawValueUint32(offset + i);
+            _DrawRawValueUInt32(offset + i);
         }
     }
-    void DrawRawValuesUint32D(uint64 offset, int bytesToRead) {
+    void DrawRawValuesUInt32D(uint64 offset, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 4) {
-            _DrawRawValueUint32D(offset + i);
+            _DrawRawValueUInt32D(offset + i);
         }
     }
-    void DrawRawValuesUint64(uint64 offset, int bytesToRead) {
+    void DrawRawValuesUInt64(uint64 offset, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 8) {
-            _DrawRawValueUint64(offset + i);
+            _DrawRawValueUInt64(offset + i);
         }
     }
-    void DrawRawValuesUint16(uint64 offset, int bytesToRead) {
+    void DrawRawValuesUInt16(uint64 offset, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 2) {
-            _DrawRawValueUint16(offset + i);
+            _DrawRawValueUInt16(offset + i);
         }
     }
-    void DrawRawValuesUint16D(uint64 offset, int bytesToRead) {
+    void DrawRawValuesUInt16D(uint64 offset, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 2) {
-            _DrawRawValueUint16D(offset + i);
+            _DrawRawValueUInt16D(offset + i);
         }
     }
-    void DrawRawValuesUint8(uint64 offset, int bytesToRead) {
+    void DrawRawValuesUInt8(uint64 offset, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 1) {
-            _DrawRawValueUint8(offset + i);
+            _DrawRawValueUInt8(offset + i);
         }
     }
-    void DrawRawValuesUint8D(uint64 offset, int bytesToRead) {
+    void DrawRawValuesUInt8D(uint64 offset, int bytesToRead) {
         for (int i = 0; i < bytesToRead; i += 1) {
-            _DrawRawValueUint8D(offset + i);
+            _DrawRawValueUInt8D(offset + i);
         }
     }
     void DrawRawValuesInt32(uint64 offset, int bytesToRead) {
@@ -170,7 +222,7 @@ class MemorySnapshot {
         }
     }
 
-    bool RV_CopiableValue(const string &in value) {
+    bool RV_CopiableValue(uint offset, const string &in value) {
         auto ret = CopiableValue(value);
         if (UI::IsItemHovered()) {
             if (UI::IsMouseClicked(UI::MouseButton::Middle)) {
@@ -187,105 +239,115 @@ class MemorySnapshot {
     }
 
     void _DrawRawValueFloat(uint offset) {
-        buf.Seek(offset);
-        RV_CopiableValue(tostring(buf.ReadFloat()));
+        RV_CopiableValue(offset, tostring(GetFloat(offset)));
     }
-    void _DrawRawValueUint32(uint offset) {
+    float GetFloat(uint offset) {
         buf.Seek(offset);
-        RV_CopiableValue(Text::Format("0x%x", buf.ReadUInt32()));
+        return buf.ReadFloat();
     }
-    void _DrawRawValueUint32D(uint offset) {
-        buf.Seek(offset);
-        RV_CopiableValue(tostring(buf.ReadUInt32()));
+    void _DrawRawValueDouble(uint offset) {
+        RV_CopiableValue(offset, tostring(GetDouble(offset)));
     }
-    void _DrawRawValueUint64(uint offset) {
+    float GetDouble(uint offset) {
         buf.Seek(offset);
-        RV_CopiableValue(Text::FormatPointer(buf.ReadUInt64()));
+        return buf.ReadDouble();
     }
-    void _DrawRawValueUint16(uint offset) {
-        buf.Seek(offset);
-        RV_CopiableValue(Text::Format("0x%x", buf.ReadUInt16()));
+    void _DrawRawValueUInt32(uint offset) {
+        RV_CopiableValue(offset, Text::Format("0x%x", GetUInt32(offset)));
     }
-    void _DrawRawValueUint16D(uint offset) {
+    uint32 GetUInt32(uint offset) {
         buf.Seek(offset);
-        RV_CopiableValue(tostring(buf.ReadUInt16()));
+        return buf.ReadUInt32();
     }
-    void _DrawRawValueUint8(uint offset) {
-        buf.Seek(offset);
-        RV_CopiableValue(Text::Format("0x%x", buf.ReadUInt8()));
+    void _DrawRawValueUInt32D(uint offset) {
+        RV_CopiableValue(offset, tostring(GetUInt32(offset)));
     }
-    void _DrawRawValueUint8D(uint offset) {
+    void _DrawRawValueUInt64(uint offset) {
+        RV_CopiableValue(offset, Text::FormatPointer(GetUInt64(offset)));
+    }
+    uint64 GetUInt64(uint offset) {
         buf.Seek(offset);
-        RV_CopiableValue(tostring(buf.ReadUInt8()));
+        return buf.ReadUInt64();
+    }
+    void _DrawRawValueUInt16(uint offset) {
+        RV_CopiableValue(offset, Text::Format("0x%x", GetUInt16(offset)));
+    }
+    uint16 GetUInt16(uint offset) {
+        buf.Seek(offset);
+        return buf.ReadUInt16();
+    }
+    void _DrawRawValueUInt16D(uint offset) {
+        RV_CopiableValue(offset, tostring(GetUInt16(offset)));
+    }
+    void _DrawRawValueUInt8(uint offset) {
+        RV_CopiableValue(offset, Text::Format("0x%x", GetUInt8(offset)));
+    }
+    uint8 GetUInt8(uint offset) {
+        buf.Seek(offset);
+        return buf.ReadUInt8();
+    }
+    void _DrawRawValueUInt8D(uint offset) {
+        RV_CopiableValue(offset, tostring(GetUInt8(offset)));
     }
     void _DrawRawValueInt32(uint offset) {
+        RV_CopiableValue(offset, Text::Format("0x%x", GetInt32(offset)));
+    }
+    int32 GetInt32(uint offset) {
         buf.Seek(offset);
-        RV_CopiableValue(Text::Format("0x%x", buf.ReadInt32()));
+        return buf.ReadInt32();
     }
     void _DrawRawValueInt32D(uint offset) {
-        buf.Seek(offset);
-        RV_CopiableValue(tostring(buf.ReadInt32()));
+        RV_CopiableValue(offset, tostring(GetInt32(offset)));
     }
     void _DrawRawValueInt16(uint offset) {
+        RV_CopiableValue(offset, Text::Format("0x%x", GetInt16(offset)));
+    }
+    int16 GetInt16(uint offset) {
         buf.Seek(offset);
-        RV_CopiableValue(Text::Format("0x%x", buf.ReadInt16()));
+        return buf.ReadInt16();
     }
     void _DrawRawValueInt16D(uint offset) {
-        buf.Seek(offset);
-        RV_CopiableValue(tostring(buf.ReadInt16()));
+        RV_CopiableValue(offset, tostring(GetInt16(offset)));
     }
     void _DrawRawValueInt8(uint offset) {
+        RV_CopiableValue(offset, Text::Format("0x%x", GetInt8(offset)));
+    }
+    int8 GetInt8(uint offset) {
         buf.Seek(offset);
-        RV_CopiableValue(Text::Format("0x%x", buf.ReadInt8()));
+        return buf.ReadInt8();
     }
     void _DrawRawValueInt8D(uint offset) {
-        buf.Seek(offset);
-        RV_CopiableValue(tostring(buf.ReadInt8()));
+        RV_CopiableValue(offset, tostring(GetInt8(offset)));
+    }
+
+    uint8 GetIndexedBit(uint ix) {
+        return GetUInt8(ix / 8) & (1 << (ix % 8));
+    }
+    uint8 GetIndexedUInt8(uint ix) {
+        return GetUInt8(ix);
+    }
+    uint16 GetIndexedUInt16(uint ix) {
+        return GetUInt16(ix * 2);
+    }
+    uint32 GetIndexedUInt32(uint ix) {
+        return GetUInt32(ix * 4);
+    }
+    uint64 GetIndexedUInt64(uint ix) {
+        return GetUInt64(ix * 8);
+    }
+    int8 GetIndexedInt8(uint ix) {
+        return GetInt8(ix);
+    }
+    int16 GetIndexedInt16(uint ix) {
+        return GetInt16(ix * 2);
+    }
+    int32 GetIndexedInt32(uint ix) {
+        return GetInt32(ix * 4);
+    }
+    float GetIndexedFloat(uint ix) {
+        return GetFloat(ix * 4);
+    }
+    double GetIndexedDouble(uint ix) {
+        return GetDouble(ix * 8);
     }
 }
-
-
-
-
-    // void _DrawRawValueFloat(uint64 valPtr) {
-    //     RV_CopiableValue(tostring(Dev::ReadFloat(valPtr)));
-    // }
-    // void _DrawRawValueUint32(uint64 valPtr) {
-    //     RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt32(valPtr)));
-    // }
-    // void _DrawRawValueUint32D(uint64 valPtr) {
-    //     RV_CopiableValue(tostring(Dev::ReadUInt32(valPtr)));
-    // }
-    // void _DrawRawValueUint16(uint64 valPtr) {
-    //     RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt16(valPtr)));
-    // }
-    // void _DrawRawValueUint16D(uint64 valPtr) {
-    //     RV_CopiableValue(tostring(Dev::ReadUInt16(valPtr)));
-    // }
-    // void _DrawRawValueUint8(uint64 valPtr) {
-    //     RV_CopiableValue(Text::Format("0x%x", Dev::ReadUInt8(valPtr)));
-    // }
-    // void _DrawRawValueUint8D(uint64 valPtr) {
-    //     RV_CopiableValue(tostring(Dev::ReadUInt8(valPtr)));
-    // }
-    // void _DrawRawValueInt32(uint64 valPtr) {
-    //     RV_CopiableValue(Text::Format("0x%x", Dev::ReadInt32(valPtr)));
-    // }
-    // void _DrawRawValueInt32D(uint64 valPtr) {
-    //     RV_CopiableValue(tostring(Dev::ReadInt32(valPtr)));
-    // }
-    // void _DrawRawValueInt16(uint64 valPtr) {
-    //     RV_CopiableValue(Text::Format("0x%x", Dev::ReadInt16(valPtr)));
-    // }
-    // void _DrawRawValueInt16D(uint64 valPtr) {
-    //     RV_CopiableValue(tostring(Dev::ReadInt16(valPtr)));
-    // }
-    // void _DrawRawValueInt8(uint64 valPtr) {
-    //     RV_CopiableValue(Text::Format("0x%x", Dev::ReadInt8(valPtr)));
-    // }
-    // void _DrawRawValueInt8D(uint64 valPtr) {
-    //     RV_CopiableValue(tostring(Dev::ReadInt8(valPtr)));
-    // }
-    // void _DrawRawValueUint64(uint64 valPtr) {
-    //     RV_CopiableValue(Text::FormatPointer(Dev::ReadUInt64(valPtr)));
-    // }
